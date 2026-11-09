@@ -1,0 +1,23 @@
+[app]
+poll_interval_seconds = 15
+retention_days = 30
+database_path = "/var/lib/xui-intelligence/monitoring.sqlite3"
+log_level = "INFO"
+
+[host]
+enabled = true
+
+[xray]
+enabled = false
+api_address = "127.0.0.1"
+api_port = 62789
+
+[xui_database]
+enabled = false
+path = "/etc/x-ui/x-ui.db"
+
+[telegram]
+enabled = false
+# Credentials must be supplied through environment variables, never committed:
+# XUI_INTELLIGENCE_TELEGRAM_BOT_TOKEN
+# XUI_INTELLIGENCE_TELEGRAM_ALLOWED_IDS
