@@ -99,7 +99,17 @@ def analyze_snapshots(
             old_counters = old_interfaces.get(interface, {})
             if not isinstance(counters, dict) or not isinstance(old_counters, dict):
                 continue
-            rates, resets = _rate_map(old_counters, counters, elapsed_seconds)
+            old_byte_counters = {
+                key: value for key, value in old_counters.items()
+                if key.endswith("_bytes")
+            }
+            new_byte_counters = {
+                key: value for key, value in counters.items()
+                if key.endswith("_bytes")
+            }
+            rates, resets = _rate_map(
+                old_byte_counters, new_byte_counters, elapsed_seconds
+            )
             if rates:
                 result["network_bytes_per_second"][interface] = rates
             result["counter_resets"].extend(
