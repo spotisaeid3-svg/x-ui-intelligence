@@ -12,6 +12,10 @@ class AppConfig:
     poll_interval_seconds: int
     retention_days: int
     database_path: Path
+    xray_enabled: bool
+    xray_binary: str
+    xray_address: str
+    xray_port: int
 
 
 def load_config(path: Path) -> AppConfig:
@@ -25,13 +29,17 @@ def load_config(path: Path) -> AppConfig:
         raw = tomllib.load(handle)
 
     app = raw.get("app", {})
+    xray = raw.get("xray", {})
     interval = int(app.get("poll_interval_seconds", 15))
     retention = int(app.get("retention_days", 30))
+    port = int(xray.get("api_port", 62789))
 
     if not 5 <= interval <= 3600:
         raise ValueError("poll_interval_seconds must be between 5 and 3600")
     if not 1 <= retention <= 3650:
         raise ValueError("retention_days must be between 1 and 3650")
+    if not 1 <= port <= 65535:
+        raise ValueError("xray.api_port must be between 1 and 65535")
 
     db_path = Path(
         app.get(
@@ -42,8 +50,29 @@ def load_config(path: Path) -> AppConfig:
     if not db_path.is_absolute():
         raise ValueError("database_path must be an absolute path")
 
+    binary = str(xray.get("binary", "/usr/local/x-ui/bin/xray"))
+    if not binary.startswith("/"):
+        raise ValueError("xray.binary must be an absolute path")
+
+    address = str(xray.get("api_address", "127.0.0.1"))
+    if address != "localhost":
+        import ipaddress
+
+        try:
+            parsed_address = ipaddress.ip_address(address)
+        except ValueError as exc:
+            raise ValueError(
+                "xray.api_address must be localhost or a loopback IP"
+            ) from exc
+        if not parsed_address.is_loopback:
+            raise ValueError("xray.api_address must be a loopback IP")
+
     return AppConfig(
         poll_interval_seconds=interval,
         retention_days=retention,
         database_path=db_path,
+        xray_enabled=bool(xray.get("enabled", False)),
+        xray_binary=binary,
+        xray_address=address,
+        xray_port=port,
     )
