@@ -2,19 +2,29 @@
 
 Read-only monitoring and alerting for an X-UI / Xray VPS.
 
-> **V1 safety boundary:** this project is monitoring-only. It does not restart services, modify X-UI/Xray configuration, manage clients, change firewall rules, or execute arbitrary shell commands.
+> **V1 safety boundary:** monitoring only. The application does not restart services, modify X-UI/Xray configuration, manage clients, change firewall rules, or execute arbitrary shell commands.
 
-## Status
+## Implemented
 
-Initial project scaffold. The first implementation milestone is host telemetry and durable local history. Xray API and X-UI database collectors will be added behind read-only interfaces after their access paths are validated against the target VPS.
+- Linux host telemetry: CPU utilization, memory, root filesystem, load average, uptime, and network counters.
+- Independent SQLite history with configurable retention.
+- Opt-in Xray StatsService collector using `statsquery`, `-reset=false`, a fixed subprocess argument list, and loopback-only API validation.
+- Opt-in X-UI database snapshot reader. It returns aggregate counts from a fixed table allowlist and never returns client identifiers or raw rows.
+- Fixed-path SQLite snapshot exporter, designed to run separately with elevated privileges and publish a read-only copy for the unprivileged application.
+- Unit tests and GitHub Actions test workflow.
+
+## Important deployment limitation
+
+**This repository is not yet an installable release.** The X-UI snapshot exporter must not be installed or enabled until the live database journal mode and WAL/SHM sidecar permissions are checked on the target VPS and a backup test succeeds. The exporter is privileged code and requires a root-owned, non-writable installation.
 
 ## Design
 
-- Python application, running as a dedicated unprivileged Linux user.
-- Independent SQLite database for monitoring history.
-- Read-only access to host metrics and, in later milestones, Xray StatsService and the X-UI SQLite database.
-- Telegram is a notification/reporting interface only; no remote shell or mutating commands.
-- Secrets are supplied through a local environment file and must never be committed.
+- Python application runs as a dedicated unprivileged Linux user.
+- Monitoring history is stored in an independent SQLite database.
+- The live X-UI database keeps its existing owner and restrictive permissions.
+- Xray API access is limited to loopback.
+- Telegram integration is not implemented yet; when added, it will be reporting/notification only, with explicit sender authorization and no remote shell.
+- Secrets must never be committed to Git.
 
 ## Requirements
 
@@ -28,31 +38,35 @@ Initial project scaffold. The first implementation milestone is host telemetry a
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -e .
+pip install -e ".[dev]"
+pytest -q
 xui-intelligence --once
 ```
 
-## Installation
-
-The installer is intentionally not enabled in this scaffold. It will be added after the collectors and permissions model are validated on the target host. Do not run an unreviewed installer as root.
-
 ## Configuration
 
-Copy `config.example.toml` to `/etc/xui-intelligence/config.toml` and adjust the values. Never put API tokens or bot tokens in Git.
+Copy `config.example.toml` to `/etc/xui-intelligence/config.toml` and adjust values. Xray and X-UI snapshot collection are disabled by default. Never put API tokens or bot tokens in Git.
 
 ## Security
 
 - No arbitrary command execution.
-- No write access to the X-UI database.
+- No write access to the live X-UI database.
 - No changes to X-UI, Xray, firewall, or system service state.
-- Telegram user authorization will be enforced before any private monitoring data is returned.
-- Logs and reports must mask UUIDs, tokens, and other credentials.
+- No client UUIDs, tokens, private keys, or raw database rows in monitoring output.
+- Logs and reports must mask identifiers and credentials.
+
+## Documentation
+
+- [Security boundary](docs/security-boundary.md)
+- [Host telemetry semantics](docs/telemetry.md)
+- [X-UI database access design](docs/xui-database-access.md)
+- [Deployment notes](docs/deployment-notes.md)
 
 ## Roadmap
 
-1. Host telemetry and SQLite history.
-2. Xray API read-only statistics.
-3. Safe X-UI database inventory snapshots.
-4. Log parsing, anomaly detection, and alert rules.
-5. Telegram reporting and notifications.
-6. Installer, systemd hardening, and operational validation.
+1. Validate collectors and CI on a clean environment.
+2. Validate Xray StatsService behavior on the target VPS.
+3. Validate the X-UI snapshot exporter against the live SQLite journal mode and sidecars.
+4. Add log parsing and anomaly detection.
+5. Add Telegram reporting and notifications.
+6. Add a hardened installer and systemd units after operational validation.
