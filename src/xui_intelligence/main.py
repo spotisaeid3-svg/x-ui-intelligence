@@ -12,6 +12,10 @@ from typing import Any
 from xui_intelligence.config import AppConfig, load_config
 from xui_intelligence.collectors.system import SystemCollector
 from xui_intelligence.collectors.xray import XrayStatsCollector, XrayStatsError
+from xui_intelligence.collectors.xui_database import (
+    XuiDatabaseCollector,
+    XuiSnapshotError,
+)
 from xui_intelligence.storage import MonitoringStore
 
 
@@ -19,6 +23,7 @@ def collect_and_store(
     config: AppConfig,
     collector: SystemCollector,
     xray_collector: XrayStatsCollector | None = None,
+    xui_collector: XuiDatabaseCollector | None = None,
 ) -> dict[str, Any]:
     metrics = collector.collect()
     if xray_collector is not None:
@@ -26,6 +31,11 @@ def collect_and_store(
             metrics["xray"] = xray_collector.collect()
         except XrayStatsError as exc:
             metrics["xray"] = {"available": False, "error": str(exc)}
+    if xui_collector is not None:
+        try:
+            metrics["xui_database"] = xui_collector.collect()
+        except XuiSnapshotError as exc:
+            metrics["xui_database"] = {"available": False, "error": str(exc)}
 
     with MonitoringStore(config.database_path) as store:
         store.record_snapshot(metrics)
@@ -64,25 +74,45 @@ def main() -> None:
         if config.xray_enabled
         else None
     )
+    xui_collector = (
+        XuiDatabaseCollector(
+            snapshot_path=str(config.xui_snapshot_path),
+            max_age_seconds=config.xui_snapshot_max_age_seconds,
+        )
+        if config.xui_database_enabled
+        else None
+    )
 
     if args.once:
-        print(json.dumps(collect_and_store(config, collector, xray_collector), indent=2))
+        print(
+            json.dumps(
+                collect_and_store(config, collector, xray_collector, xui_collector),
+                indent=2,
+            )
+        )
         return
 
     logging.info(
-        "Starting read-only monitoring; interval=%ss xray_enabled=%s",
+        "Starting read-only monitoring; interval=%ss xray_enabled=%s xui_db_enabled=%s",
         config.poll_interval_seconds,
         config.xray_enabled,
+        config.xui_database_enabled,
     )
     while True:
         try:
-            snapshot = collect_and_store(config, collector, xray_collector)
+            snapshot = collect_and_store(
+                config,
+                collector,
+                xray_collector,
+                xui_collector,
+            )
             logging.info(
-                "Snapshot stored: cpu=%s%% memory=%s%% disk=%s%% xray=%s",
+                "Snapshot stored: cpu=%s%% memory=%s%% disk=%s%% xray=%s xui_db=%s",
                 snapshot["cpu"]["usage_percent"],
                 snapshot["memory"]["used_percent"],
                 snapshot["disk_root"]["used_percent"],
                 snapshot.get("xray", {}).get("available", False),
+                snapshot.get("xui_database", {}).get("available", False),
             )
         except Exception:
             logging.exception("Monitoring cycle failed")
