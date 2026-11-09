@@ -8,6 +8,7 @@ Read-only monitoring and alerting for an X-UI / Xray VPS.
 
 - Linux host telemetry: CPU utilization, memory, root filesystem, load average, uptime, and network counters.
 - Independent SQLite history with configurable retention.
+- Pure analytics for host-network and aggregate Xray byte rates, counter-reset detection, and configurable CPU/memory/disk threshold alerts.
 - Opt-in Xray StatsService collector using `statsquery`, `-reset=false`, a fixed subprocess argument list, and loopback-only API validation.
 - Opt-in X-UI database snapshot reader. It returns aggregate counts from a fixed table allowlist and never returns client identifiers or raw rows.
 - Fixed-path SQLite snapshot exporter, designed to run separately with elevated privileges and publish a read-only copy for the unprivileged application.
@@ -59,6 +60,7 @@ Copy `config.example.toml` to `/etc/xui-intelligence/config.toml` and adjust val
 
 - [Security boundary](docs/security-boundary.md)
 - [Host telemetry semantics](docs/telemetry.md)
+- [Snapshot analytics](docs/analytics.md)
 - [X-UI database access design](docs/xui-database-access.md)
 - [Deployment notes](docs/deployment-notes.md)
 
@@ -67,6 +69,6 @@ Copy `config.example.toml` to `/etc/xui-intelligence/config.toml` and adjust val
 1. Validate collectors and CI on a clean environment.
 2. Validate Xray StatsService behavior on the target VPS.
 3. Validate the X-UI snapshot exporter against the live SQLite journal mode and sidecars.
-4. Add log parsing and anomaly detection.
-5. Add Telegram reporting and notifications.
+4. Add log parsing and statistical anomaly detection.
+5. Add alert persistence, deduplication, and Telegram reporting/notifications.
 6. Add a hardened installer and systemd units after operational validation.
