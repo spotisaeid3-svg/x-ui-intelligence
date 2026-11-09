@@ -36,6 +36,17 @@ class MonitoringStore:
         self.connection.commit()
         return self
 
+    def latest_snapshot(self) -> dict[str, Any] | None:
+        """Return the newest stored snapshot and its UTC capture timestamp."""
+        if self.connection is None:
+            raise RuntimeError("MonitoringStore must be used as a context manager")
+        row = self.connection.execute(
+            "SELECT captured_at, payload_json FROM snapshots ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        if row is None:
+            return None
+        return {"captured_at": row[0], "payload": json.loads(row[1])}
+
     def record_snapshot(self, payload: dict[str, Any]) -> None:
         if self.connection is None:
             raise RuntimeError("MonitoringStore must be used as a context manager")
