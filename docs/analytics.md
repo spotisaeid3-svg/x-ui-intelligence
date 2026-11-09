@@ -10,7 +10,7 @@ The pure analytics module derives throughput from consecutive cumulative counter
 - Missing counters and the first sample produce no rate.
 - A decreasing counter is reported in `counter_resets`; it never produces a negative rate. This can occur after a process restart or interface reset.
 
-The caller must provide the actual elapsed interval between snapshots. Do not assume the configured polling interval equals the observed interval.
+The collection loop now reads the previous stored snapshot and calculates the actual elapsed interval from its UTC capture timestamp. It does not assume the configured polling interval equals the observed interval. Derived analytics are stored alongside each new snapshot.
 
 ## Resource alerts
 
