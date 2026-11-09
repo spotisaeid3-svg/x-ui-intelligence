@@ -8,7 +8,7 @@ Read-only monitoring and alerting for an X-UI / Xray VPS.
 
 - Linux host telemetry: CPU utilization, memory, root filesystem, load average, uptime, and network counters.
 - Independent SQLite history with configurable retention.
-- Pure analytics for host-network and aggregate Xray byte rates, counter-reset detection, and configurable CPU/memory/disk threshold alerts.
+- Integrated snapshot analytics for host-network and aggregate Xray byte rates, counter-reset detection, and configurable CPU/memory/disk threshold alerts.
 - Opt-in Xray StatsService collector using `statsquery`, `-reset=false`, a fixed subprocess argument list, and loopback-only API validation.
 - Opt-in X-UI database snapshot reader. It returns aggregate counts from a fixed table allowlist and never returns client identifiers or raw rows.
 - Fixed-path SQLite snapshot exporter, designed to run separately with elevated privileges and publish a read-only copy for the unprivileged application.
