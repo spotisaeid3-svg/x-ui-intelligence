@@ -6,9 +6,11 @@ import argparse
 import json
 import logging
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xui_intelligence.analytics import analyze_snapshots
 from xui_intelligence.config import AppConfig, load_config
 from xui_intelligence.collectors.system import SystemCollector
 from xui_intelligence.collectors.xray import XrayStatsCollector, XrayStatsError
@@ -38,6 +40,24 @@ def collect_and_store(
             metrics["xui_database"] = {"available": False, "error": str(exc)}
 
     with MonitoringStore(config.database_path) as store:
+        previous = store.latest_snapshot()
+        elapsed_seconds: float | None = None
+        if previous is not None:
+            try:
+                previous_time = datetime.fromisoformat(
+                    previous["captured_at"].replace("Z", "+00:00")
+                )
+                elapsed_seconds = (
+                    datetime.now(previous_time.tzinfo) - previous_time
+                ).total_seconds()
+            except (TypeError, ValueError):
+                elapsed_seconds = None
+
+        metrics["analytics"] = analyze_snapshots(
+            previous["payload"] if previous is not None else None,
+            metrics,
+            elapsed_seconds=elapsed_seconds,
+        )
         store.record_snapshot(metrics)
         store.prune(config.retention_days)
     return metrics
