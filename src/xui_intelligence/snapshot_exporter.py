@@ -59,6 +59,20 @@ def create_snapshot() -> dict[str, object]:
 
         destination = sqlite3.connect(temporary_path, timeout=10)
         source.backup(destination)
+
+        # Publish a self-contained rollback-journal snapshot. A read-only
+        # SQLite connection cannot create WAL/SHM sidecars in the protected
+        # snapshot directory, so leaving the backup in WAL mode would make
+        # read-only consumers fail even though the main database is valid.
+        snapshot_journal_mode = str(
+            destination.execute("PRAGMA journal_mode=DELETE").fetchone()[0]
+        ).lower()
+        if snapshot_journal_mode != "delete":
+            raise RuntimeError(
+                f"Could not convert snapshot to DELETE journal mode: "
+                f"{snapshot_journal_mode}"
+            )
+
         check = destination.execute("PRAGMA quick_check").fetchone()
         if not check or check[0] != "ok":
             raise RuntimeError("SQLite snapshot quick_check failed")
@@ -75,6 +89,7 @@ def create_snapshot() -> dict[str, object]:
         return {
             "status": "ok",
             "journal_mode": journal_mode,
+            "snapshot_journal_mode": snapshot_journal_mode,
             "snapshot_path": str(SNAPSHOT_DB),
             "snapshot_bytes": SNAPSHOT_DB.stat().st_size,
             "snapshot_mode": oct(stat.S_IMODE(SNAPSHOT_DB.stat().st_mode)),
