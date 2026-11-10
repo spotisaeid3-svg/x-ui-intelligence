@@ -37,6 +37,7 @@ def test_exporter_publishes_group_read_only_snapshot(tmp_path: Path, monkeypatch
 
     assert result["status"] == "ok"
     assert result["journal_mode"] in {"delete", "wal"}
+    assert result["snapshot_journal_mode"] == "delete"
     assert stat.S_IMODE(snapshot_dir.stat().st_mode) == 0o750
     assert stat.S_IMODE(snapshot_path.stat().st_mode) == 0o640
     assert (snapshot_dir, 0, 23456) in chown_calls
@@ -50,6 +51,7 @@ def test_exporter_publishes_group_read_only_snapshot(tmp_path: Path, monkeypatch
 
     reader = sqlite3.connect(f"{snapshot_path.as_uri()}?mode=ro", uri=True)
     try:
+        assert reader.execute("PRAGMA quick_check").fetchone()[0] == "ok"
         assert reader.execute("SELECT COUNT(*) FROM clients").fetchone()[0] == 1
     finally:
         reader.close()
