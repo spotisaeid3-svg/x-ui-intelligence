@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 
 class MonitoringStore:
@@ -13,7 +13,7 @@ class MonitoringStore:
         self.path = path
         self.connection: sqlite3.Connection | None = None
 
-    def __enter__(self) -> "MonitoringStore":
+    def __enter__(self) -> Self:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.connection = sqlite3.connect(self.path, timeout=10)
         self.connection.execute("PRAGMA journal_mode=WAL")
