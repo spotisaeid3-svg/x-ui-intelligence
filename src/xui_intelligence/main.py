@@ -11,14 +11,16 @@ from pathlib import Path
 from typing import Any
 
 from xui_intelligence.analytics import analyze_snapshots
-from xui_intelligence.config import AppConfig, load_config
 from xui_intelligence.collectors.system import SystemCollector
 from xui_intelligence.collectors.xray import XrayStatsCollector, XrayStatsError
 from xui_intelligence.collectors.xui_database import (
     XuiDatabaseCollector,
     XuiSnapshotError,
 )
+from xui_intelligence.config import AppConfig, load_config
 from xui_intelligence.storage import MonitoringStore
+
+logger = logging.getLogger(__name__)
 
 
 def collect_and_store(
@@ -45,7 +47,7 @@ def collect_and_store(
         if previous is not None:
             try:
                 previous_time = datetime.fromisoformat(
-                    previous["captured_at"].replace("Z", "+00:00")
+                    previous["captured_at"]
                 )
                 elapsed_seconds = (
                     datetime.now(previous_time.tzinfo) - previous_time
@@ -112,7 +114,7 @@ def main() -> None:
         )
         return
 
-    logging.info(
+    logger.info(
         "Starting read-only monitoring; interval=%ss xray_enabled=%s xui_db_enabled=%s",
         config.poll_interval_seconds,
         config.xray_enabled,
@@ -126,7 +128,7 @@ def main() -> None:
                 xray_collector,
                 xui_collector,
             )
-            logging.info(
+            logger.info(
                 "Snapshot stored: cpu=%s%% memory=%s%% disk=%s%% xray=%s xui_db=%s",
                 snapshot["cpu"]["usage_percent"],
                 snapshot["memory"]["used_percent"],
@@ -135,7 +137,7 @@ def main() -> None:
                 snapshot.get("xui_database", {}).get("available", False),
             )
         except Exception:
-            logging.exception("Monitoring cycle failed")
+            logger.exception("Monitoring cycle failed")
         time.sleep(config.poll_interval_seconds)
 
 
