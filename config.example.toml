@@ -15,7 +15,7 @@ api_port = 62789
 
 [xui_database]
 enabled = false
-snapshot_path = "/var/lib/xui-intelligence/xui-readonly.sqlite3"
+snapshot_path = "/var/lib/xui-intelligence-snapshot/xui-readonly.sqlite3"
 snapshot_max_age_seconds = 180
 
 [telegram]
