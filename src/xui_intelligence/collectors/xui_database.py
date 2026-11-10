@@ -24,7 +24,7 @@ class XuiDatabaseCollector:
 
     def __init__(
         self,
-        snapshot_path: str = "/var/lib/xui-intelligence/xui-readonly.sqlite3",
+        snapshot_path: str = "/var/lib/xui-intelligence-snapshot/xui-readonly.sqlite3",
         max_age_seconds: int = 180,
     ) -> None:
         self.snapshot_path = Path(snapshot_path)
