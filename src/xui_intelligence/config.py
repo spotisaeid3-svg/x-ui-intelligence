@@ -76,7 +76,7 @@ def load_config(path: Path) -> AppConfig:
     snapshot_path = Path(
         xui_database.get(
             "snapshot_path",
-            "/var/lib/xui-intelligence/xui-readonly.sqlite3",
+            "/var/lib/xui-intelligence-snapshot/xui-readonly.sqlite3",
         )
     )
     if not snapshot_path.is_absolute():
