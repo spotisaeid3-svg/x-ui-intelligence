@@ -76,13 +76,16 @@ def analyze_snapshots(
     previous: dict[str, Any] | None,
     current: dict[str, Any],
     elapsed_seconds: float | None = None,
-    thresholds: AlertThresholds = AlertThresholds(),
+    thresholds: AlertThresholds | None = None,
 ) -> dict[str, Any]:
     """Return derived rates and threshold alerts for two consecutive snapshots.
 
     Counter rates are omitted for the first sample, invalid intervals, missing
     counters, and counters that decreased (e.g. after a process/interface reset).
     """
+    if thresholds is None:
+        thresholds = AlertThresholds()
+
     result: dict[str, Any] = {
         "network_bytes_per_second": {},
         "xray_bytes_per_second": {},
