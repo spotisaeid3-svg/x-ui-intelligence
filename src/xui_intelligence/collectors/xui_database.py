@@ -69,14 +69,19 @@ class XuiDatabaseCollector:
                     "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
                 )
             }
+            missing_tables = sorted(set(EXPECTED_TABLES) - tables)
+            if missing_tables:
+                raise XuiSnapshotError(
+                    "X-UI snapshot is missing expected tables: "
+                    + ", ".join(missing_tables)
+                )
 
             counts: dict[str, int] = {}
             for table in EXPECTED_TABLES:
-                if table in tables:
-                    # Table names come only from this constant allowlist.
-                    counts[table] = int(
-                        connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
-                    )
+                # Table names come only from this constant allowlist.
+                counts[table] = int(
+                    connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+                )
 
             return {
                 "available": True,
