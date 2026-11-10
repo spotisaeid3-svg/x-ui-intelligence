@@ -40,7 +40,13 @@ def test_exporter_publishes_group_read_only_snapshot(tmp_path: Path, monkeypatch
     assert stat.S_IMODE(snapshot_dir.stat().st_mode) == 0o750
     assert stat.S_IMODE(snapshot_path.stat().st_mode) == 0o640
     assert (snapshot_dir, 0, 23456) in chown_calls
-    assert (snapshot_path, 0, 23456) in chown_calls
+    assert any(
+        path.parent == snapshot_dir
+        and path.name.startswith(".xui-snapshot-")
+        and uid == 0
+        and gid == 23456
+        for path, uid, gid in chown_calls
+    )
 
     reader = sqlite3.connect(f"{snapshot_path.as_uri()}?mode=ro", uri=True)
     try:
