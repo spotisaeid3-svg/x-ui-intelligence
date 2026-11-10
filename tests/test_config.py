@@ -26,3 +26,14 @@ def test_reject_relative_database_path(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="absolute"):
         load_config(config_file)
+
+
+def test_default_snapshot_path_is_outside_app_writable_state(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("[xui_database]\nenabled = false\n", encoding="utf-8")
+
+    config = load_config(config_file)
+
+    assert config.xui_snapshot_path == Path(
+        "/var/lib/xui-intelligence-snapshot/xui-readonly.sqlite3"
+    )
