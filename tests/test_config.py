@@ -69,5 +69,5 @@ def test_telegram_rejects_empty_allowlist(tmp_path: Path, monkeypatch) -> None:
 def test_reject_string_boolean_for_security_switches(tmp_path: Path) -> None:
     config_file = tmp_path / "config.toml"
     config_file.write_text('[telegram]\nenabled = "false"\n', encoding="utf-8")
-    with pytest.raises(ValueError, match="TOML boolean"):
+    with pytest.raises(TypeError, match="TOML boolean"):
         load_config(config_file)

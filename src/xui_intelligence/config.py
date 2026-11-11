@@ -31,13 +31,13 @@ class AppConfig:
 def _boolean(section: dict[str, object], key: str, default: bool) -> bool:
     value = section.get(key, default)
     if not isinstance(value, bool):
-        raise ValueError(f"{key} must be a TOML boolean")
+        raise TypeError(f"{key} must be a TOML boolean")
     return value
 
 
 def _positive_ids(value: object) -> frozenset[int]:
     if not isinstance(value, list):
-        raise ValueError("telegram.allowed_user_ids must be an array of positive integers")
+        raise TypeError("telegram.allowed_user_ids must be an array of positive integers")
     result: set[int] = set()
     for item in value:
         if isinstance(item, bool) or not isinstance(item, int) or item <= 0:
@@ -78,7 +78,7 @@ def load_config(path: Path) -> AppConfig:
                 "xui_database": xui_database, "telegram": telegram}
     for section_name, section in sections.items():
         if not isinstance(section, dict):
-            raise ValueError(f"[{section_name}] must be a TOML table")
+            raise TypeError(f"[{section_name}] must be a TOML table")
 
     interval = int(app.get("poll_interval_seconds", 15))
     retention = int(app.get("retention_days", 30))
