@@ -1,28 +1,39 @@
 # Security boundary
 
-## Allowed in V1
+## Allowed in 1.0.0
 
-- Read Linux telemetry from procfs and filesystem statistics.
-- Write monitoring measurements to the application's own database.
-- Read Xray statistics through its loopback API after that collector is implemented and validated.
-- Read X-UI inventory data through a separately validated read-only database access mechanism.
-- Send reports and alerts to explicitly authorized Telegram accounts after Telegram integration is implemented.
+- Read Linux host counters and filesystem statistics.
+- Write snapshots and retention cleanup only in the application's independent data directory.
+- Query Xray StatsService only when explicitly enabled, using a fixed CLI invocation and a loopback API endpoint. The CLI call uses `-reset=false`.
+- Read an optional, separately exported X-UI SQLite snapshot in read-only mode and return aggregate counts from a fixed table allowlist.
+- Send read-only reports through Telegram to allowlisted numeric user IDs in private chats.
 
-## Explicitly out of scope
+## Explicitly prohibited / out of scope
 
-- Restarting, stopping, or modifying X-UI, Xray, or other services.
-- Creating, editing, deleting, enabling, or disabling X-UI clients or inbounds.
-- Editing Xray configuration, routing, firewall, SSH, or system settings.
-- Running shell commands supplied by Telegram or any remote user.
-- Reading decrypted HTTPS/VPN application payloads.
+- Create, edit, enable, disable, or delete clients, UUIDs, inbounds, or panel settings.
+- Change X-UI/Xray configuration, routing, service state, firewall, SSH, or operating-system settings.
+- Stop, start, or restart X-UI or Xray.
+- Execute shell commands supplied by Telegram or by a remote user.
+- Expose raw X-UI rows, UUIDs, email-like identifiers, client labels, credentials, private keys, or decrypted application payloads.
+- Bind the Xray API collector to a non-loopback address.
 
-## Credential handling
+## Telegram controls
 
-- Never commit bot tokens, API tokens, client UUIDs, private keys, or passwords.
-- Keep runtime secrets in root-readable or service-user-readable local files with restrictive permissions.
-- Mask identifiers in logs and Telegram output.
-- Authorize Telegram sender IDs before returning server-specific information.
+- Only private chats are accepted.
+- Sender IDs must match the configured numeric allowlist.
+- Missing token or allowlist causes startup validation to fail when Telegram is enabled.
+- The only commands are `/status`, `/alerts`, and `/help`.
+- The bot token is read from `XUI_INTELLIGENCE_TELEGRAM_BOT_TOKEN`; never commit it.
+- Store the EnvironmentFile as `root:xui-intelligence` mode `0640`.
 
-## Database handling
+## Process and filesystem controls
 
-The X-UI database is not the monitoring database. Do not change its owner or mode. Confirm SQLite journal mode and sidecar-file behavior before implementing access controls. Prefer a verified read-only snapshot or another safe read-only mechanism over broadening permissions on the live panel database.
+- The main service runs as dedicated unprivileged user `xui-intelligence`.
+- The application code and virtual environment are root-owned and not writable by the service.
+- systemd uses `NoNewPrivileges`, an empty capability set, strict filesystem protection, private temporary/device namespaces, and a narrow writable application-state directory.
+- The application never receives sudo access.
+- The snapshot exporter is a separate fixed-path oneshot systemd service. It is root-run only to read the protected live database and publish a protected snapshot; its paths and SQL behavior are not user-configurable.
+
+## X-UI database handling
+
+The live panel database and WAL/SHM sidecars retain their existing owner and permissions. The exporter opens the live database with SQLite `mode=ro`, calls the Online Backup API, validates the copy, and publishes it atomically. The monitoring process opens only the copied database with `mode=ro`, `query_only=ON`, and `trusted_schema=OFF`.

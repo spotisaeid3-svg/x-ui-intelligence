@@ -2,53 +2,28 @@
 
 ## Separation of duties
 
-The live database at `/etc/x-ui/x-ui.db` retains its existing owner and
-restrictive permissions. The application service never receives direct access.
+The live database at `/etc/x-ui/x-ui.db` retains its existing owner and restrictive permissions. The unprivileged monitoring service never opens it directly and receives no sudo access.
 
-A fixed-path root-run exporter uses SQLite's online backup API from a read-only
-source connection and publishes a consistent copy at:
+A fixed-path, root-run exporter opens the source with SQLite `mode=ro`, copies it through the Online Backup API, validates the copy using `PRAGMA quick_check`, converts the snapshot to a self-contained DELETE-journal file, and atomically publishes:
 
 `/var/lib/xui-intelligence-snapshot/xui-readonly.sqlite3`
 
-The snapshot directory is owned by `root` and the monitoring service's primary
-group, with mode `0750`. The snapshot file is owned by `root` and that group,
-with mode `0640`. The service can read the file but cannot replace it or write
-to its parent directory. Keep the app's writable state directory separate.
-
-The application opens the snapshot with SQLite `mode=ro`,
-`PRAGMA query_only=ON`, and `PRAGMA trusted_schema=OFF`.
+The directory is owned by `root:xui-intelligence` mode `0750`; the snapshot file is `root:xui-intelligence` mode `0640`. The app's independent writable state directory remains separate.
 
 ## Fail-closed behavior
 
-- The exporter accepts no command-line paths or arbitrary SQL.
-- It refuses symlinks and non-regular source database paths.
-- It never updates, vacuums, checkpoints, or changes journal mode on the live DB.
-- It writes to a temporary file, runs `quick_check`, and atomically renames it.
-- The collector rejects missing, stale, or invalid snapshots.
-- Only aggregate counts from a fixed table allowlist are returned.
-- Client UUIDs, email-like identifiers, labels, tokens, and raw row contents are not returned.
+- No command-line paths, arbitrary SQL, or user-controlled source path are accepted.
+- The exporter rejects a symlink or non-regular source path.
+- The live database is never updated, vacuumed, checkpointed, or switched to another journal mode.
+- The exporter writes a temporary copy, checks it, and publishes atomically.
+- The collector rejects a missing, stale, symlinked, or invalid snapshot.
+- The collector returns aggregate counts only from a fixed table allowlist.
+- UUIDs, email-like identifiers, labels, tokens, and raw row contents are not returned.
 
-## Target VPS validation
+## Enabling the optional timer
 
-The target VPS reported SQLite 3.45.1, journal mode `wal`, and existing
-`x-ui.db-wal` / `x-ui.db-shm` sidecars with mode `0600`. A read-only
-SQLite Online Backup API test completed successfully and the copied database
-passed `PRAGMA quick_check`.
+The default installation does not enable the snapshot exporter. Use `sudo ./install.sh --with-xui-snapshot` only after validating live SQLite behavior on the target VPS. The installer runs one backup first; if that fails, it does not enable the timer.
 
-This validates the backup method on the live host. It does not yet validate the
-installed helper's ownership, service account group membership, timer behavior,
-or production permissions.
+The timer runs the isolated `xui-intelligence-snapshot.service` oneshot service at a one-minute cadence. The service has no network access and can write only to the snapshot directory. It is separate from the main unprivileged collector.
 
-## Deployment gate
-
-Before enabling the exporter:
-
-1. Confirm the dedicated `xui-intelligence` account and its primary group.
-2. Install the exporter as root-owned and non-writable by the monitoring account.
-3. Confirm the snapshot directory is `root:<service-primary-group>` mode `0750`.
-4. Confirm the snapshot file is `root:<service-primary-group>` mode `0640`.
-5. Run one manual export and test the reader as the unprivileged service account.
-6. Only then consider a systemd timer.
-
-Do not change ownership or permissions of the live X-UI database or its WAL/SHM
-sidecars. Do not grant generic sudo access to the exporter.
+Never broaden permissions on `/etc/x-ui/x-ui.db` or its `-wal` / `-shm` files. Never grant generic sudo rights to the monitoring account.

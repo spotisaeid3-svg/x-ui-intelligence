@@ -20,6 +20,7 @@ snapshot_max_age_seconds = 180
 
 [telegram]
 enabled = false
-# Credentials must be supplied through environment variables, never committed:
-# XUI_INTELLIGENCE_TELEGRAM_BOT_TOKEN
-# XUI_INTELLIGENCE_TELEGRAM_ALLOWED_IDS
+# Only positive numeric Telegram user IDs are accepted. Never use a public group.
+allowed_user_ids = []
+# Bot token is read ONLY from XUI_INTELLIGENCE_TELEGRAM_BOT_TOKEN in the service environment.
+# Optional override for IDs: XUI_INTELLIGENCE_TELEGRAM_ALLOWED_IDS=123456789,987654321

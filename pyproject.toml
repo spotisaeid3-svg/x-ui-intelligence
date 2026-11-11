@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xui-intelligence"
-version = "0.1.0"
-description = "Read-only monitoring for X-UI and Xray servers"
+version = "1.0.0"
+description = "Read-only monitoring and reporting for X-UI and Xray servers"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
+telegram = ["aiogram>=3.13,<4"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]

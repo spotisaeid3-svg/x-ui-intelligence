@@ -1,0 +1,29 @@
+[Unit]
+Description=Export a read-only X-UI SQLite snapshot for X-UI Intelligence
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/opt/xui-intelligence/venv/bin/python -m xui_intelligence.snapshot_exporter
+UMask=0027
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_CHOWN
+AmbientCapabilities=CAP_CHOWN
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX
+ReadOnlyPaths=/etc/x-ui
+ReadWritePaths=/var/lib/xui-intelligence-snapshot
